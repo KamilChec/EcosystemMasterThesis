@@ -21,5 +21,5 @@ class Dataset:
         Z = Z.reshape(xx.shape)
         plt.contourf(xx, yy, Z, cmap=plt.cm.Spectral)
         plt.scatter(X[:, 0], X[:, 1], c=y, cmap=plt.cm.Spectral)
-        plt.plot()
+        plt.show()
         
