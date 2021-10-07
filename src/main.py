@@ -12,7 +12,7 @@ class NeuralNetwork:
     def __init__(self, input, output):
         self.input = input
         self.output = output
-        self.num_examples = len(self.input) # training set size
+        self.num_examples = len(self.input)
         
         self.W1 = 0
         self.b1 = 0
@@ -96,6 +96,7 @@ class NeuralNetwork:
             
             if print_loss and i % 1000 == 0:
                 self.print_loss(i)
+
 
 
 def main():
