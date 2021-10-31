@@ -1,6 +1,8 @@
+from operator import attrgetter
 import neuralNetwork as nn
 import dataset as d
 import numpy as np
+import random
 
 class GeneticAlgorithm:
     nn_hidm = 3
@@ -40,23 +42,67 @@ class GeneticAlgorithm:
         
         return loss
     
-    def probability(self):
-        pass
+    def set_adaptation(self, chromosomes):
+        for chromosome in chromosomes:
+            chromosome.set_adaptation(self.adaptation(chromosome))
+
+    def probability_of_selecting(self, chromosomes):
+        adaptation_sum = 0
+        for chromosome in chromosomes:
+            adaptation_sum += chromosome.adaptation
+        probabilities = []
+        for chromosome in chromosomes:
+            probabilities.append(chromosome.adaptation / adaptation_sum)
+        norm_factor = 1 / sum(probabilities)
+        normalised = []
+        for probability in probabilities:
+            normalised.append(norm_factor * probability)
+
+        return normalised
+
     
-    def choose_parents(self):
-        pass
+    def select_parents(self, chromosomes):
+        choice = np.random.choice(chromosomes, self.num_population, p=self.probability_of_selecting(chromosomes))
+        
+        return choice
     
-    def selection(self):
-        pass
+    def crossover(self, chromosomes):
+        offspring = []
+        parents = self.select_parents(chromosomes)
+        available_parents = list(range(self.num_population))
+        for i in range(self.num_population):
+            if i % 2 == 0:
+                crossing_point = np.random.randint(len(chromosomes[0].body))
+            else:
+                mother_idx = random.choice(available_parents)
+                available_parents.remove(mother_idx)
+                father_idx = random.choice(available_parents)
+                available_parents.remove(father_idx)
+                mother, father = parents[mother_idx].body.copy(), parents[father_idx].body.copy()
+                
+                buff = father[crossing_point:].copy()
+                father[crossing_point:] = mother[crossing_point:].copy()
+                mother[crossing_point:] = buff.copy()
+                offspring.append(father.copy())
+                offspring.append(mother.copy())
+                
+        return offspring
+                
+    def mutation(self, offspring):
+        for chromosome in offspring:
+            for i in range(len(offspring[0])):
+                if random.uniform(0, 100) < 1:
+                    chromosome[i] = random.uniform(-5, 5)
+        
+        return offspring
+            
+    def set_new_population(self, offspring, chromosomes):
+        for i in range(len(offspring)):
+            chromosomes[i].set_body(offspring[i])
+            chromosomes[i].set_adaptation(self.adaptation(chromosomes[i]))
     
-    def crossover(self):
-        pass
-    
-    def mutation(self):
-        pass
-    
-    def best_chromosome(self):
-        pass
+    def best_chromosome(self, chromosomes):
+        return min(chromosomes, key=attrgetter('adaptation'))
     
 class Chromosome:
     def __init__(self, id, body, adaptation):
@@ -76,8 +122,12 @@ class Chromosome:
 data = d.Dataset()
 input, output = data.get_dataset()        
 neural_network = nn.NeuralNetwork(input, output)
-ga_algorithm = GeneticAlgorithm(1, neural_network)
+ga_algorithm = GeneticAlgorithm(50, neural_network)
 
 chromosomes = ga_algorithm.create_population()
-
-print(ga_algorithm.adaptation(chromosomes[0]))
+# for chromosome in chromosomes:
+#     chromosome.set_adaptation(ga_algorithm.adaptation(chromosome))
+ga_algorithm.adaptation(chromosomes)
+offspring = ga_algorithm.crossover(chromosomes)
+offspring = ga_algorithm.mutation(offspring)
+ga_algorithm.set_new_population(offspring, chromosomes)

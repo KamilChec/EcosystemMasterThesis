@@ -79,7 +79,7 @@ class NeuralNetwork:
         print("Loss after iteration %i: %f" %(index, self.calculate_loss()))
         
     def create_population(self, nn_hdim):
-        np.random.seed(0)
+        # np.random.seed(0)
         W1 = np.random.randn(self.nn_input_dim, nn_hdim) / np.sqrt(self.nn_input_dim)
         b1 = np.zeros((1, nn_hdim))
         W2 = np.random.randn(nn_hdim, self.nn_output_dim) / np.sqrt(nn_hdim)
