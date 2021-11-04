@@ -3,9 +3,11 @@ import neuralNetwork as nn
 import dataset as d
 import numpy as np
 import random
+import matplotlib.pyplot as plt
 
 class GeneticAlgorithm:
     nn_hidm = 3
+    all_generation_adaptations = []
     
     def __init__(self, num_population, neuralNetwork):
         self.num_population = num_population
@@ -104,6 +106,19 @@ class GeneticAlgorithm:
     def best_chromosome(self, chromosomes):
         return min(chromosomes, key=attrgetter('adaptation'))
     
+    def print_loss(self, chromosomes, iteration, first_use=False):
+        adaptation = self.best_chromosome(chromosomes).adaptation
+        self.all_generation_adaptations.append(adaptation)
+        mode = 'w' if first_use else 'a'
+        with open('res/data.txt', mode) as file:
+                file.write("Loss after iteration {}:\t{}\n".format(iteration, adaptation))
+    
+    def plot_evolution_of_adaptation(self):
+        nn_adaptations = len(self.all_generation_adaptations)
+        x = np.linspace(0, nn_adaptations, nn_adaptations)
+        plt.plot(x, self.all_generation_adaptations, '-o')
+        plt.show()
+    
 class Chromosome:
     def __init__(self, id, body, adaptation):
         self.id = id
@@ -118,14 +133,3 @@ class Chromosome:
         
     def __str__(self):
         return 'Chromosome numb.: ' + str(self.id) + '\n ' + str(self.body) + '\nadaptation: ' + str(self.adaptation) + '\n'
-
-data = d.Dataset()
-input, output = data.get_dataset()        
-neural_network = nn.NeuralNetwork(input, output)
-ga_algorithm = GeneticAlgorithm(50, neural_network)
-
-chromosomes = ga_algorithm.create_population()
-ga_algorithm.set_adaptation(chromosomes)
-coressedOffspring = ga_algorithm.crossover(chromosomes)
-mutatedOffspring = ga_algorithm.mutation(coressedOffspring)
-ga_algorithm.set_new_population(mutatedOffspring, chromosomes)
