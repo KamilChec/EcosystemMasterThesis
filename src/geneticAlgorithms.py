@@ -4,6 +4,7 @@ import dataset as d
 import numpy as np
 import random
 import matplotlib.pyplot as plt
+import math
 
 class GeneticAlgorithm:
     nn_hidm = 3
@@ -49,19 +50,13 @@ class GeneticAlgorithm:
             chromosome.set_adaptation(self.adaptation(chromosome))
 
     def probability_of_selecting(self, chromosomes):
-        adaptation_sum = 0
-        for chromosome in chromosomes:
-            adaptation_sum += chromosome.adaptation
-        probabilities = []
-        for chromosome in chromosomes:
-            probabilities.append(chromosome.adaptation / adaptation_sum)
-        norm_factor = 1 / sum(probabilities)
-        normalised = []
-        for probability in probabilities:
-            normalised.append(norm_factor * probability)
-
+        log_adaptation_sum = 0
+        log_adaptation_sum = sum([math.exp(-ch.adaptation*2) for ch in chromosomes])
+        probabilities = [math.exp(-ch.adaptation*2)/log_adaptation_sum for ch in chromosomes]
+        norm_factor = 1 / sum(probabilities) 
+        normalised = [norm_factor * p for p in probabilities] 
+        
         return normalised
-
     
     def select_parents(self, chromosomes):
         choice = np.random.choice(chromosomes, self.num_population, p=self.probability_of_selecting(chromosomes))
@@ -89,13 +84,13 @@ class GeneticAlgorithm:
                 offspring.append(mother.copy())
                 
         return offspring
-                
+    
     def mutation(self, offspring):
         for chromosome in offspring:
-            for i in range(len(offspring[0])):
-                if random.uniform(0, 100) < 1:
-                    chromosome[i] = random.uniform(-5, 5)
-        
+            if random.random() < 0.03:
+                mutation_point = random.randint(0, len(offspring[0]) - 1)
+                chromosome[mutation_point] = random.uniform(-5, 5)
+                  
         return offspring
             
     def set_new_population(self, offspring, chromosomes):
@@ -110,7 +105,7 @@ class GeneticAlgorithm:
         adaptation = self.best_chromosome(chromosomes).adaptation
         self.all_generation_adaptations.append(adaptation)
         mode = 'w' if first_use else 'a'
-        with open('res/data.txt', mode) as file:
+        with open('res/gaData.txt', mode) as file:
                 file.write("Loss after iteration {}:\t{}\n".format(iteration, adaptation))
     
     def plot_evolution_of_adaptation(self):
@@ -133,3 +128,23 @@ class Chromosome:
         
     def __str__(self):
         return 'Chromosome numb.: ' + str(self.id) + '\n ' + str(self.body) + '\nadaptation: ' + str(self.adaptation) + '\n'
+
+
+# data = d.Dataset()
+# input, output = data.get_dataset()
+# neural_network = nn.NeuralNetwork(input, output)
+# genetic_algorithm = GeneticAlgorithm(20, neural_network)
+# chromosomes = genetic_algorithm.create_population()
+
+
+# genetic_algorithm.set_adaptation(chromosomes)
+
+# for chrom in chromosomes:
+#     print(chrom.adaptation)
+
+# parents = genetic_algorithm.select_parents(chromosomes)
+# print('\n')
+# for chrom in parents:
+#     print(chrom.adaptation)
+    
+

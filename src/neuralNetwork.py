@@ -1,12 +1,16 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 class NeuralNetwork:
     nn_input_dim = 2 # input layer dimensionality
     nn_output_dim = 2 # output layer dimensionality
+    nn_hdim = 3
 
     # Gradient descent parameters (I picked these by hand)
     epsilon = 0.01 # learning rate for gradient descent
     reg_lambda = 0.01 # regularization strengt
+    
+    all_generation_loss = []
     
     def __init__(self, input, output):
         self.input = input
@@ -76,14 +80,19 @@ class NeuralNetwork:
         return W1, b1, W2, b2
     
     def print_loss(self, index):
-        print("Loss after iteration %i: %f" %(index, self.calculate_loss()))
+        loss = self.calculate_loss()
+        self.all_generation_loss.append(loss)
+        print("Loss after iteration %i: %f" %(index, loss))
         
     def create_population(self, nn_hdim):
         # np.random.seed(0)
         W1 = np.random.randn(self.nn_input_dim, nn_hdim) / np.sqrt(self.nn_input_dim)
-        b1 = np.zeros((1, nn_hdim))
+        # b1 = np.zeros((1, nn_hdim)) zmiana dla PSO
+        b1 = np.random.randn(1, nn_hdim)
         W2 = np.random.randn(nn_hdim, self.nn_output_dim) / np.sqrt(nn_hdim)
-        b2 = np.zeros((1, self.nn_output_dim))
+        # b2 = np.zeros((1, self.nn_output_dim)) zmiana dla PSO
+        b2 = np.random.randn(1, self.nn_output_dim)
+
         return W1, b1, W2, b2
         
         
@@ -98,3 +107,12 @@ class NeuralNetwork:
             
             if print_loss and i % 1000 == 0:
                 self.print_loss(i)
+    
+    def plot_evolution_of_adaptation(self):
+        nn_losses = len(self.all_generation_loss)
+        x = np.linspace(0, nn_losses, nn_losses)
+        plt.plot(x, self.all_generation_loss, '-o')
+        plt.show()
+        
+    def __str__(self):
+      return 'Neural networl: W1: \n' + str(self.W1) + '\nb1: \n' + str(self.b1) + '\nW2: \n' + str(self.W2) + '\nb2: \n' + str(self.b2) + '\n' 
