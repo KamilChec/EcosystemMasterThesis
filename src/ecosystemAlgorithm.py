@@ -1,31 +1,84 @@
 import numpy as np
 import neuralNetwork as nn
 import dataset as d
+import ecoParams as param
 
 class EcosystemAlgorithm:
-    def __init__(self, NeuralNetwork, n_ppl):
+    def __init__(self, NeuralNetwork):
         self.NeuralNetwork = NeuralNetwork
-        self.n_ppl = n_ppl
+        self.best_herbivore = None
+        self.best_predator = None
     
-    def interaction_plant_herbivore(self):
+    def count_velocity(self, Animal, best_animal_so_far):
+        r = np.random.rand()
+        pt_prev_v = Animal.mcp[0] * r * Animal.velocity
+        pt_best = Animal.mcp[1] * r * Animal.best_animal[1] - Animal.position
+        pt_best_so_far = Animal[1] * r * best_animal_so_far[1] - Animal.position
         pass
+            
+    def save_bests(self, Herbivores, Predators):
+        for herbiovore, predator in zip(Herbivores, Predators):
+            herbiovore.save_best_animal()
+            predator.save_best_animal()
+            
+        best_herbivore = self.find_best_animal(Herbivores)
+        best_predator = self.find_best_animal(Predators)
+        
+        if self.best_herbivore is not None:
+            if self.best_herbivore[0] >  best_herbivore[0]:
+                self.best_herbivore = best_herbivore
+        else: self.best_herbivore = best_herbivore
+            
+        if self.best_predator is not None:
+            if self.best_predator[0] >  best_predator[0]:
+                self.best_predator = best_predator
+        else: self.best_predator = best_predator
+            
+    def find_best_animal(self, Animals):
+        best = min(Animals, key=lambda Animal: Animal.adaptation)
+        
+        return best.adaptation, best.position
     
-    def interaction_herbivore_predator(self):
-        pass
+    def create_population(self):
+        plants = self.create_plant_population()
+        herbivores = self.create_herbivore_population()
+        predators = self.create_predator_population()
+        
+        return plants, herbivores, predators
     
-    def crossover_plant(self):
-        pass
+    def create_predator_population(self):
+        predators = []
+        
+        for i in range(param.n_pr):
+            position = self.deploy_position()
+            adaptation = self.count_adaptation(position)
+            mcp = np.random.uniform(-0.5, 2, 6)
+            prey = np.random.randint(0, param.n_he) 
+            predator = Predator(i, position, adaptation, mcp , 0, prey)
+            predators.append(predator)
+            
+        return predators
     
-    def crossover_animal(self):
-        pass
+    def create_herbivore_population(self):
+        herbivores = []
+        
+        for i in range(param.n_he):
+            position = self.deploy_position()
+            adaptation = self.count_adaptation(position)
+            mcp = np.random.uniform(-0.5, 2, 6)
+            prey = np.random.randint(0, param.n_pl)
+            herbivore = Herbivore(i, position, adaptation, mcp, 0, prey)
+            herbivores.append(herbivore)
+            
+        return herbivores
     
     def create_plant_population(self):  
         plants = []
         
-        for i in range(self.n_ppl):
+        for i in range(param.n_pl):
             position = self.deploy_position()
             adaptation = self.count_adaptation(position)
-            plant = Plant(i, position, adaptation, 0)
+            plant = Plant(i, position, adaptation)
             plants.append(plant)
         
         for p in plants: p.set_size(self.count_plants_size(p, plants))
@@ -41,7 +94,7 @@ class EcosystemAlgorithm:
             
     def count_plants_size(self, plant, plants):
         sum_adaptation = sum(p.adaptation for p in plants)
-        size = plant.adaptation / sum_adaptation * self.n_ppl
+        size = plant.adaptation / sum_adaptation * param.n_pl
         
         return 1/size
         
@@ -89,43 +142,57 @@ class Organism:
     
 
 class Plant(Organism):
-    def __init__(self, id, position, adaptation, size):
+    def __init__(self, id, position, adaptation):
         super().__init__(id, position, adaptation)
-        self.size = size
+        self._size = None
+        
+    @property
+    def size(self):
+        return self._size
         
     def set_size(self, size):
-        self.size = size
+        self._size = size
         
 class Animal(Organism):
-    def __init__(self, id, position, adaptation, mcp, best_location, velocity, prey):
+    def __init__(self, id, position, adaptation, mcp, velocity, prey):
         super().__init__(id, position, adaptation)
-        self.mcp = mcp
-        self.best_location = best_location
         self.velocity = velocity
         self.prey = prey
-        
-    def find_best_location(self):
-        pass
-    def perform_movement(self):
-        pass
+        self.mcp = mcp
+        self._best_animal = None
     
-class Herbivore(Animal):
-    def __init__(self, id, position, adaptation, mcp, best_location, velocity, prey):
-        super().__init__(id, position, adaptation, mcp, best_location, velocity, prey)
+    @property
+    def best_animal(self):
+        return self._best_animal
         
+    def save_best_animal(self):
+        if self.best_animal is not None:
+            if self.best_animal[0] < self.adaptation:
+                self._best_animal = [self.adaptation, self.position]
+        else:
+            self._best_animal = [self.adaptation, self.position]
+            
+        
+class Herbivore(Animal):
+    def __init__(self, id, position, adaptation, mcp, velocity, prey):
+        super().__init__(id, position, adaptation, mcp, velocity, prey)       
     
 
 class Predator(Animal):
-    def __init__(self, id, position, mcp, best_location, velocity, prey, life):
-        super().__init__(id, position, mcp, best_location, velocity, prey)
-        self.life = life
+    def __init__(self, id, position, adaptation, mcp, velocity, prey):
+        super().__init__(id, position, adaptation, mcp, velocity, prey)
+        self.life = param.life
         
 
 data = d.Dataset()
 input, output = data.get_dataset()
 neural_network = nn.NeuralNetwork(input, output)
-eco = EcosystemAlgorithm(neural_network, 3)
+eco = EcosystemAlgorithm(neural_network)
 
 plants = eco.create_plant_population()
+herbivores = eco.create_herbivore_population()
+predators = eco.create_predator_population()
 
-for p in plants: print(p.size)
+eco.save_bests(herbivores, predators)
+
+print(eco.best_herbivore, eco.best_predator)

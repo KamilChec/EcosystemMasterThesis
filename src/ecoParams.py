@@ -1,0 +1,13 @@
+alg_iter = 10
+inter_break = 2
+n_pl = 15
+n_he = 10
+n_pr = 5
+mutation_pl = 0.1
+mutation_he = 0.1
+mutation_pr = 0.1
+plants_movements = 5
+life = 5
+size = 1
+nutrition_req = 2
+neighbourhood_r = 2
