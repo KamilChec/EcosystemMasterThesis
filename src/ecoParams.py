@@ -10,4 +10,4 @@ plants_movements = 5
 life = 5
 size = 1
 nutrition_req = 2
-neighbourhood_r = 2
+neighbourhood_r = 1.5 # (-4;4)
