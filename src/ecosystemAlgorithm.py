@@ -1,3 +1,4 @@
+from cProfile import label
 import numpy as np
 import neuralNetwork as nn
 import dataset as d
@@ -5,6 +6,7 @@ import ecoParams as param
 import sys
 import math
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 class EcosystemAlgorithm:
     #TODO merge plant_progress with best_plan and so on
@@ -13,6 +15,7 @@ class EcosystemAlgorithm:
         self.best_plant = None
         self.best_herbivore = None
         self.best_predator = None
+        
         self.plant_progress = []
         self.herbivore_progress = []
         self.predator_progress = []
@@ -20,13 +23,27 @@ class EcosystemAlgorithm:
         self.deaths = 0
         self.mutations = 0
         
-        self.mcp_explore = 1.5
-        self.mcp_exploitation = 0
+        self.mcp_explore = 2
+        self.mcp_exploit = 0
+    
+    def plot_evolution_of_adaptation(self):
+        plant_nn_adaptations = len(self.plant_progress)
+        x = np.linspace(0, plant_nn_adaptations, plant_nn_adaptations)
+        plt.plot(x, self.plant_progress, '-o', label='plants')
+        plt.plot(x, self.herbivore_progress, '-o', label='herbivores')
+        plt.plot(x, self.predator_progress, '-o', label='predators')
+        plt.legend()
+        plt.show()
+        
+    def seed_distribution(self, Herbivores):
+        selected_distributors = np.random.choice(Herbivores, param.plant_movements, replace=False)
+        for herbivore in selected_distributors:
+            herbivore.prey.set_position(herbivore.best_organism[1])
         
     def exploration_exploitation_change(self):
         if self.mcp_explore > 0.1: self.mcp_explore -= 0.1
-        if self.mcp_exploitation < 1.5: self.mcp_exploitation += 0.1
-        
+        if self.mcp_exploit <= 1.5: self.mcp_exploit += 0.1
+            
      #TODO zrobić wypisanie na sam koniec z tablicy   
     def print_loss(self, Plants, Herbivores, Predators, iteration, first_use=False):
         best_plant = self.find_best_organism(Plants)[0]    
@@ -168,10 +185,12 @@ class EcosystemAlgorithm:
         return survived
             
     
-    def perform_movement(self, Animals, best_so_far, best_prey):
+    def perform_movement(self, Animals, best_so_far, best_prey, PSO_movement=True):
          for animal in Animals:
-            # velocity = self.count_velocity(animal, best_so_far, best_prey)
-            velocity = self.count_velocity_PSO(animal, best_so_far, best_prey)
+            if PSO_movement: 
+                velocity = self.count_velocity_PSO(animal, best_so_far, best_prey)
+            else:
+                velocity = self.count_velocity(animal, best_so_far, best_prey)
             animal.set_velocity(velocity)
             position = animal.position + animal.velocity
             animal.set_position(position)
@@ -192,16 +211,27 @@ class EcosystemAlgorithm:
     def count_velocity_PSO(self, Animal, best_animal_so_far, best_prey_so_far):
         r = np.random.rand(6)
         w = 0.8
+        
+        mcp_explore = self.slice_mcp(self.mcp_explore, 3)
+        mcp_exploit= self.slice_mcp(self.mcp_exploit, 2)
+        
         pt_prev_v = w * Animal.velocity
-        pt_best = self.mcp_explore * r[0] * (Animal.best_organism[1] - Animal.position)
-        pt_best_so_far = self.mcp_exploitation * r[1] * (best_animal_so_far[1] - Animal.position)
+        pt_best = mcp_explore[0] * r[0] * (Animal.best_organism[1] - Animal.position)
+        pt_best_so_far = mcp_exploit[0] * r[1] * (best_animal_so_far[1] - Animal.position)
         if Animal.best_neighbour is not None:
-            pt_best_neighbour = 0.3 * r[2] * (Animal.best_neighbour[1] - Animal.position)
+            pt_best_neighbour = mcp_exploit[1] * r[2] * (Animal.best_neighbour[1] - Animal.position)
         else: pt_best_neighbour = 0
-        pt_assign_prey =  self.mcp_explore * r[3] * (Animal.prey.position - Animal.position)
-        pt_best_prey =  self.mcp_explore * r[4] * (best_prey_so_far[1] - Animal.position)
+        pt_assign_prey =  mcp_explore[1] * r[3] * (Animal.prey.position - Animal.position)
+        pt_best_prey =  mcp_explore[2] * r[4] * (best_prey_so_far[1] - Animal.position)
         
         return pt_prev_v + pt_best + pt_best_so_far + pt_best_prey + pt_assign_prey + pt_best_neighbour
+    
+    def slice_mcp(self, mcp, int):
+        arr = np.random.rand(int)
+        arr_sum = np.sum(arr)
+        arr = np.array([a/arr_sum for a in arr])
+        
+        return arr * mcp
     
     def save_best_neighbour(self, Animals):
         for animal in Animals:
@@ -413,14 +443,15 @@ def main():
     plants, herbivores, predators = eco.create_population()
 
     eco.save_bests(plants, herbivores, predators)
-    
+        
     for i in tqdm(range(param.alg_iter)):
         eco.perform_movement(herbivores, eco.best_herbivore, eco.best_plant)
         eco.perform_movement(predators, eco.best_predator, eco.best_herbivore)
         
+        if i % param.mcp_change_iter == 0: eco.exploration_exploitation_change()
         if i % param.interactions == 0:
-            eco.exploration_exploitation_change()
             plants = eco.plant_herbivore_simulation(plants, herbivores)
+            eco.seed_distribution(herbivores)
             herbivores, predators = eco.herbivore_predator_simulation(herbivores, predators)
 
             plants = eco.plant_crossover(plants)
@@ -430,8 +461,7 @@ def main():
             plants = eco.plant_mutation(plants)
             herbivores = eco.animal_mutation(herbivores, param.mutation_he)
             predators = eco.animal_mutation(predators, param.mutation_pr)
-    
-            eco.save_bests(plants, herbivores, predators)
+            
             
         if i % param.save_to_file == 0 or i == param.alg_iter - 1:
             first_use = True if i == 0 else False 
@@ -439,8 +469,13 @@ def main():
         
         eco.set_adaptation_for_all(plants, herbivores, predators)
         eco.save_bests(plants, herbivores, predators)
+        eco.save_bests(plants, herbivores, predators)
         
     print('deaths: {}\tmutations: {}'.format(eco.deaths, eco.mutations))
+    eco.plot_evolution_of_adaptation()
+    best = min(predators, key=lambda predators: predators.adaptation)
+    neural_network.set_network_parameters(*eco.organism_to_neuron(best.position))
+    data.plot_decision_boundary(lambda x: neural_network.predict(x))
 
 if __name__ == "__main__":
     main()

@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+np.seterr(all='ignore')
+
 class NeuralNetwork:
     nn_input_dim = 2 # input layer dimensionality
     nn_output_dim = 2 # output layer dimensionality

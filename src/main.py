@@ -25,28 +25,28 @@ def main():
     # genetic_algorithm.plot_evolution_of_adaptation()
     # data.plot_decision_boundary(lambda x: neural_network.predict(x))
     
-    population = partical_optimalization.create_population()
-    partical_optimalization.set_all_parameters(population)
-    for i in tqdm(range(100)):
-        partical_optimalization.set_all_parameters(population)
-        partical_optimalization.perform_movement(population)
-        if i % 10 == 0:
-            if (i == 0): 
-                partical_optimalization.print_loss(i, first_use=True)
-            else:
-                partical_optimalization.print_loss(i)
-            if partical_optimalization.c1 > 0.1: partical_optimalization.c1 -= 0.1
-            partical_optimalization.c2 += 0.1
+    # population = partical_optimalization.create_population()
+    # partical_optimalization.set_all_parameters(population)
+    # for i in tqdm(range(100)):
+    #     partical_optimalization.set_all_parameters(population)
+    #     partical_optimalization.perform_movement(population)
+    #     if i % 10 == 0:
+    #         if (i == 0): 
+    #             partical_optimalization.print_loss(i, first_use=True)
+    #         else:
+    #             partical_optimalization.print_loss(i)
+    #         if partical_optimalization.c1 > 0.1: partical_optimalization.c1 -= 0.1
+    #         partical_optimalization.c2 += 0.1
             
     # partical_optimalization.plot_evolution_of_adaptation()
     # data.plot_decision_boundary(lambda x: neural_network.predict(x))
     
     
-    # neural_network = nn.NeuralNetwork(input, output)
-    # neural_network.build_model_with_backpropagation(3, print_loss=True)
-    # print(neural_network)
-    # data.plot_decision_boundary(lambda x: neural_network.predict(x))
-    # neural_network.plot_evolution_of_adaptation()
+    neural_network = nn.NeuralNetwork(input, output)
+    neural_network.build_model_with_backpropagation(3, print_loss=True)
+    print(neural_network)
+    data.plot_decision_boundary(lambda x: neural_network.predict(x))
+    neural_network.plot_evolution_of_adaptation()
 
 
 
