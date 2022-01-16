@@ -1,2 +1,0 @@
-Loss after iteration init:	0.42380359318653676
-Loss after iteration 0:	0.4620920493687443
