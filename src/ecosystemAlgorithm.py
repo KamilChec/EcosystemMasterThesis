@@ -32,6 +32,9 @@ class EcosystemAlgorithm:
         plt.plot(x, self.plant_progress, '-o', label='plants')
         plt.plot(x, self.herbivore_progress, '-o', label='herbivores')
         plt.plot(x, self.predator_progress, '-o', label='predators')
+        plt.title('Ecosystem algorithm')
+        plt.xlabel("generations x100")
+        plt.ylabel("loss function")
         plt.legend()
         plt.show()
         
@@ -191,12 +194,14 @@ class EcosystemAlgorithm:
                 velocity = self.count_velocity_PSO(animal, best_so_far, best_prey)
             else:
                 velocity = self.count_velocity(animal, best_so_far, best_prey)
+                velocity[velocity > 1] = 1
+                velocity[velocity < -1] = -1
             animal.set_velocity(velocity)
             position = animal.position + animal.velocity
             animal.set_position(position)
             
     def count_velocity(self, Animal, best_animal_so_far, best_prey_so_far):
-        r = np.random.uniform(0, 0.2)
+        r = np.random.uniform(0, 1)
         pt_prev_v = Animal.mcp[0] * r * Animal.velocity
         pt_best = Animal.mcp[1] * r * (Animal.best_organism[1] - Animal.position)
         pt_best_so_far = Animal.mcp[2] * r * (best_animal_so_far[1] - Animal.position)
@@ -332,7 +337,7 @@ class EcosystemAlgorithm:
         return plants
     
     def deploy_position(self):
-            network_parameters = self.NeuralNetwork.create_population(3)
+            network_parameters = self.NeuralNetwork.create_population()
             position = []
             for p in network_parameters: position = np.append(position, np.ravel(p))
             
@@ -445,8 +450,8 @@ def main():
     eco.save_bests(plants, herbivores, predators)
         
     for i in tqdm(range(param.alg_iter)):
-        eco.perform_movement(herbivores, eco.best_herbivore, eco.best_plant)
-        eco.perform_movement(predators, eco.best_predator, eco.best_herbivore)
+        eco.perform_movement(herbivores, eco.best_herbivore, eco.best_plant, PSO_movement=param.pso_mode)
+        eco.perform_movement(predators, eco.best_predator, eco.best_herbivore, PSO_movement=param.pso_mode)
         
         if i % param.mcp_change_iter == 0: eco.exploration_exploitation_change()
         if i % param.interactions == 0:
@@ -462,19 +467,20 @@ def main():
             herbivores = eco.animal_mutation(herbivores, param.mutation_he)
             predators = eco.animal_mutation(predators, param.mutation_pr)
             
+        eco.set_adaptation_for_all(plants, herbivores, predators)
+        eco.save_bests(plants, herbivores, predators)
+        eco.save_bests(plants, herbivores, predators)
             
         if i % param.save_to_file == 0 or i == param.alg_iter - 1:
             first_use = True if i == 0 else False 
             eco.print_loss(plants, herbivores, predators, i, first_use)
         
-        eco.set_adaptation_for_all(plants, herbivores, predators)
-        eco.save_bests(plants, herbivores, predators)
-        eco.save_bests(plants, herbivores, predators)
         
-    print('deaths: {}\tmutations: {}'.format(eco.deaths, eco.mutations))
-    eco.plot_evolution_of_adaptation()
     best = min(predators, key=lambda predators: predators.adaptation)
     neural_network.set_network_parameters(*eco.organism_to_neuron(best.position))
+    print('deaths: {}\tmutations: {}'.format(eco.deaths, eco.mutations))
+    print("Wrong predictions: {}".format(neural_network.count_wrong_predictions()))
+    eco.plot_evolution_of_adaptation()
     data.plot_decision_boundary(lambda x: neural_network.predict(x))
 
 if __name__ == "__main__":
