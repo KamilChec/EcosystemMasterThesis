@@ -9,7 +9,7 @@ class NeuralNetwork:
     nn_hdim = 3
 
     # Gradient descent parameters (I picked these by hand)
-    epsilon = 0.01 # learning rate for gradient descent
+    eta = 0.01 # learning rate for gradient descent
     reg_lambda = 0.01 # regularization strengt
     
     all_generation_loss = []
@@ -33,8 +33,8 @@ class NeuralNetwork:
         a1 = np.tanh(z1)
         z2 = a1.dot(W2) + b2
         exp_scores = np.exp(z2)
-        prediction = exp_scores / np.sum(exp_scores, axis=1, keepdims=True)  
-        return prediction        
+        softmax = exp_scores / np.sum(exp_scores, axis=1, keepdims=True)  
+        return softmax        
     
     def calculate_loss(self):
         y = self.output
@@ -60,7 +60,6 @@ class NeuralNetwork:
     def backpropagation(self, probs):
         X, y = self.input, self.output
         W1, b1, W2, b2 = self.W1, self.b1, self.W2, self.b2
-        epsilon = self.epsilon
         
         delta3 = probs
         delta3[range(self.num_examples), y] -= 1
@@ -75,10 +74,11 @@ class NeuralNetwork:
         dW2 += self.reg_lambda * W2
         dW1 += self.reg_lambda * W1
         
-        W1 += -epsilon * dW1
-        b1 += -epsilon * db1
-        W2 += -epsilon * dW2
-        b2 += -epsilon * db2
+        W1 += -self.eta * dW1
+        b1 += -self.eta * db1
+        W2 += -self.eta * dW2
+        b2 += -self.eta * db2
+        
         return W1, b1, W2, b2
     
     def print_loss(self, index):
@@ -86,20 +86,20 @@ class NeuralNetwork:
         self.all_generation_loss.append(loss)
         print("Loss after iteration %i: %f" %(index, loss))
         
-    def create_population(self, nn_hdim):
+    def create_population(self):
         # np.random.seed(0)
-        W1 = np.random.randn(self.nn_input_dim, nn_hdim) / np.sqrt(self.nn_input_dim)
-        # b1 = np.zeros((1, nn_hdim)) zmiana dla PSO
-        b1 = np.random.randn(1, nn_hdim)
-        W2 = np.random.randn(nn_hdim, self.nn_output_dim) / np.sqrt(nn_hdim)
-        # b2 = np.zeros((1, self.nn_output_dim)) zmiana dla PSO
-        b2 = np.random.randn(1, self.nn_output_dim)
+        W1 = np.random.randn(self.nn_input_dim, self.nn_hdim) / np.sqrt(self.nn_input_dim)
+        b1 = np.zeros((1, self.nn_hdim))
+        # b1 = np.random.randn(1, nn_hdim)
+        W2 = np.random.randn(self.nn_hdim, self.nn_output_dim) / np.sqrt(self.nn_hdim)
+        b2 = np.zeros((1, self.nn_output_dim)) 
+        # b2 = np.random.randn(1, self.nn_output_dim)
 
         return W1, b1, W2, b2
         
         
-    def build_model_with_backpropagation(self, nn_hdim, num_passes=20000, print_loss=False):
-        W1, b1, W2, b2 = self.create_population(nn_hdim)
+    def build_model_with_backpropagation(self, num_passes=1000, print_loss=False):
+        W1, b1, W2, b2 = self.create_population()
         self.set_network_parameters(W1, b1, W2, b2)
         
         for i in range(0, num_passes):
@@ -107,14 +107,26 @@ class NeuralNetwork:
             W1, b1, W2, b2 = self.backpropagation(probs)
             self.set_network_parameters(W1, b1, W2, b2)
             
-            if print_loss and i % 1000 == 0:
+            if print_loss and i % 100 == 0 or i == num_passes-1:
                 self.print_loss(i)
     
     def plot_evolution_of_adaptation(self):
         nn_losses = len(self.all_generation_loss)
         x = np.linspace(0, nn_losses, nn_losses)
         plt.plot(x, self.all_generation_loss, '-o')
+        plt.title('Backpropagation')
+        plt.xlabel("generations x100")
+        plt.ylabel("loss function")
         plt.show()
+        
+    def count_wrong_predictions(self):
+        predictions = self.predict(self.input)
+        wrong = 0
+        for output, prediction in zip(self.output, predictions):
+            if output != prediction:
+                wrong += 1
+        
+        return wrong
         
     def __str__(self):
       return 'Neural networl: W1: \n' + str(self.W1) + '\nb1: \n' + str(self.b1) + '\nW2: \n' + str(self.W2) + '\nb2: \n' + str(self.b2) + '\n' 

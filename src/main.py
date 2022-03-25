@@ -43,10 +43,11 @@ def main():
     
     
     neural_network = nn.NeuralNetwork(input, output)
-    neural_network.build_model_with_backpropagation(3, print_loss=True)
-    print(neural_network)
-    data.plot_decision_boundary(lambda x: neural_network.predict(x))
+    neural_network.build_model_with_backpropagation( print_loss=True)
+    print("Wrong predictions: {}".format(neural_network.count_wrong_predictions()))
+    # print(neural_network)
     neural_network.plot_evolution_of_adaptation()
+    data.plot_decision_boundary(lambda x: neural_network.predict(x))
 
 
 
